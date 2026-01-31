@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, Navigate, Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -9,6 +9,7 @@ import {
   Clock,
   Image,
   AlertCircle,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,12 +36,15 @@ import {
   CATEGORY_LABELS,
   ReportCategory,
   ReportStatus,
+  Report,
 } from "@/types/report";
 import { toast } from "sonner";
+import { mockReports } from "@/data/mockReports";
 
 interface AddReportProps {
   isAuthenticated: boolean;
   onLogout: () => void;
+  onReportCreated?: (report: Report) => void;
 }
 
 const YANGON_TOWNSHIPS = [
@@ -66,8 +70,9 @@ const YANGON_TOWNSHIPS = [
   "Yankin",
 ];
 
-const AddReport = ({ isAuthenticated, onLogout }: AddReportProps) => {
+const AddReport = ({ isAuthenticated, onLogout, onReportCreated }: AddReportProps) => {
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -84,6 +89,9 @@ const AddReport = ({ isAuthenticated, onLogout }: AddReportProps) => {
     lng: number;
   } | null>(null);
 
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -95,6 +103,34 @@ const AddReport = ({ isAuthenticated, onLogout }: AddReportProps) => {
   const handleMapClick = (lat: number, lng: number) => {
     setSelectedLocation({ lat, lng });
     setErrors((prev) => ({ ...prev, location: "" }));
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File size must be less than 5MB");
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please select an image file");
+        return;
+      }
+      setSelectedPhoto(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setSelectedPhoto(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const validateForm = () => {
@@ -131,6 +167,29 @@ const AddReport = ({ isAuthenticated, onLogout }: AddReportProps) => {
 
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // Create new report
+    const newReport: Report = {
+      id: `report-${Date.now()}`,
+      title: formData.title,
+      description: formData.description || `${formData.title} reported in ${formData.township} township.`,
+      category: formData.category as ReportCategory,
+      status: formData.status,
+      latitude: selectedLocation!.lat,
+      longitude: selectedLocation!.lng,
+      township: formData.township,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      photoUrl: photoPreview || undefined,
+    };
+
+    // Add to mock reports for real-time update
+    mockReports.unshift(newReport);
+
+    // Notify parent component
+    if (onReportCreated) {
+      onReportCreated(newReport);
+    }
 
     toast.success("Report created successfully!");
     navigate("/admin");
@@ -300,7 +359,7 @@ const AddReport = ({ isAuthenticated, onLogout }: AddReportProps) => {
                 Location
               </CardTitle>
               <CardDescription>
-                Click on the map to select the exact location within Yangon
+                Select the township and click on the map to pinpoint the exact location
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -319,7 +378,7 @@ const AddReport = ({ isAuthenticated, onLogout }: AddReportProps) => {
                   >
                     <SelectValue placeholder="Select township" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-50 max-h-60">
                     {YANGON_TOWNSHIPS.map((township) => (
                       <SelectItem key={township} value={township}>
                         {township}
@@ -339,13 +398,18 @@ const AddReport = ({ isAuthenticated, onLogout }: AddReportProps) => {
                 </Alert>
               )}
 
-              <div className="overflow-hidden rounded-lg border border-border">
-                <div className="h-[300px]">
-                  <YangonMap
-                    reports={[]}
-                    onMapClick={handleMapClick}
-                    selectedLocation={selectedLocation}
-                  />
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">
+                  Click on the map to select a location
+                </Label>
+                <div className="relative overflow-hidden rounded-lg border border-border">
+                  <div className="h-[300px] w-full">
+                    <YangonMap
+                      reports={[]}
+                      onMapClick={handleMapClick}
+                      selectedLocation={selectedLocation}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -374,17 +438,51 @@ const AddReport = ({ isAuthenticated, onLogout }: AddReportProps) => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-center rounded-lg border-2 border-dashed border-border p-8 transition-colors hover:border-primary/50">
-                <div className="text-center">
-                  <Image className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    Drag and drop an image, or click to browse
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Max file size: 5MB
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                onChange={handlePhotoChange}
+                className="hidden"
+              />
+              
+              {photoPreview ? (
+                <div className="relative">
+                  <img
+                    src={photoPreview}
+                    alt="Selected photo"
+                    className="max-h-64 w-full rounded-lg object-contain"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute right-2 top-2"
+                    onClick={handleRemovePhoto}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {selectedPhoto?.name} ({(selectedPhoto?.size ?? 0 / 1024 / 1024).toFixed(2)} MB)
                   </p>
                 </div>
-              </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex w-full cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border p-8 transition-colors hover:border-primary/50 hover:bg-muted/50"
+                >
+                  <div className="text-center">
+                    <Upload className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">
+                      Click to browse and upload an image
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Max file size: 5MB
+                    </p>
+                  </div>
+                </button>
+              )}
             </CardContent>
           </Card>
 

@@ -19,6 +19,7 @@ export interface Report {
   township: string;
   createdAt: string;
   updatedAt: string;
+  photoUrl?: string;
 }
 
 export const CATEGORY_LABELS: Record<ReportCategory, string> = {
