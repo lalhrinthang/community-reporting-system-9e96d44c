@@ -362,7 +362,7 @@ const AddReport = ({ isAuthenticated, onLogout, onReportCreated }: AddReportProp
                 Select the township and click on the map to pinpoint the exact location
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="township">
                   Township <span className="text-destructive">*</span>
@@ -378,7 +378,7 @@ const AddReport = ({ isAuthenticated, onLogout, onReportCreated }: AddReportProp
                   >
                     <SelectValue placeholder="Select township" />
                   </SelectTrigger>
-                  <SelectContent className="z-50 max-h-60">
+                  <SelectContent position="popper" className="z-[9999] max-h-60">
                     {YANGON_TOWNSHIPS.map((township) => (
                       <SelectItem key={township} value={township}>
                         {township}
