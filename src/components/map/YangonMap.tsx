@@ -145,8 +145,13 @@ const YangonMap = ({
           icon: createCategoryIcon(report.category),
         });
 
+        const photoHtml = report.photoUrl
+          ? `<img src="${report.photoUrl}" alt="Report photo" style="width: 100%; max-height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 8px;" />`
+          : "";
+
         marker.bindPopup(`
-          <div style="min-width: 180px;">
+          <div style="min-width: 200px; max-width: 280px;">
+            ${photoHtml}
             <h3 style="margin: 0 0 4px 0; font-weight: 600; font-size: 14px;">
               ${report.title}
             </h3>
