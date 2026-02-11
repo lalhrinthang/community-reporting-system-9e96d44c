@@ -61,14 +61,8 @@ const AdminDashboard = ({ isAuthenticated, onLogout }: AdminDashboardProps) => {
   const [viewMode, setViewMode] = useState<"table" | "map">("table");
   const [reports, setReports] = useState<Report[]>(mockReports);
 
-  // Redirect if not authenticated
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
   const filteredReports = useMemo(() => {
     return reports.filter((report) => {
-      // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         if (
@@ -79,17 +73,12 @@ const AdminDashboard = ({ isAuthenticated, onLogout }: AdminDashboardProps) => {
           return false;
         }
       }
-
-      // Status filter
       if (statusFilter !== "all" && report.status !== statusFilter) {
         return false;
       }
-
-      // Category filter
       if (categoryFilter !== "all" && report.category !== categoryFilter) {
         return false;
       }
-
       return true;
     });
   }, [reports, searchQuery, statusFilter, categoryFilter]);
@@ -102,6 +91,11 @@ const AdminDashboard = ({ isAuthenticated, onLogout }: AdminDashboardProps) => {
       archived: reports.filter((r) => r.status === "archived").length,
     };
   }, [reports]);
+
+  // Redirect if not authenticated (after all hooks)
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   const handleStatusChange = (reportId: string, newStatus: ReportStatus) => {
     setReports((prev) =>
