@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Filter, X, Info, Clock, MapPin } from "lucide-react";
+import { Filter, X, Info, Clock, MapPin, Radar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -19,8 +19,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import Layout from "@/components/layout/Layout";
 import YangonMap from "@/components/map/YangonMap";
+import ProximityAlertSettings from "@/components/proximity/ProximityAlertSettings";
+import ProximityAlertBanner from "@/components/proximity/ProximityAlertBanner";
 import { mockReports } from "@/data/mockReports";
 import { Report, CATEGORY_LABELS, ReportCategory } from "@/types/report";
+import { useProximityAlerts } from "@/hooks/useProximityAlerts";
 import { formatDistanceToNow } from "date-fns";
 
 interface MapViewProps {
@@ -35,19 +38,15 @@ const MapView = ({ isAuthenticated, onLogout }: MapViewProps) => {
 
   const filteredReports = useMemo(() => {
     return mockReports.filter((report) => {
-      // Category filter
       if (categoryFilter !== "all" && report.category !== categoryFilter) {
         return false;
       }
-
-      // Time filter
       if (timeFilter !== "all") {
         const reportDate = new Date(report.createdAt);
         const now = new Date();
         const daysDiff = Math.floor(
           (now.getTime() - reportDate.getTime()) / (1000 * 60 * 60 * 24)
         );
-
         switch (timeFilter) {
           case "7days":
             if (daysDiff > 7) return false;
@@ -60,10 +59,18 @@ const MapView = ({ isAuthenticated, onLogout }: MapViewProps) => {
             break;
         }
       }
-
       return true;
     });
   }, [categoryFilter, timeFilter]);
+
+  const {
+    settings: proximitySettings,
+    updateSettings: updateProximitySettings,
+    alerts: proximityAlerts,
+    dismissAlert,
+    dismissAll,
+    geolocation,
+  } = useProximityAlerts(filteredReports);
 
   const handleReportClick = (report: Report) => {
     setSelectedReport(report);
@@ -85,78 +92,104 @@ const MapView = ({ isAuthenticated, onLogout }: MapViewProps) => {
   return (
     <Layout isAuthenticated={isAuthenticated} onLogout={onLogout}>
       <div className="relative h-[calc(100vh-64px-80px)] md:h-[calc(100vh-64px)]">
-        {/* Filter Controls */}
-        <div className="absolute left-4 right-4 top-4 z-10 flex items-center gap-2 md:left-auto md:right-4 md:w-auto">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="secondary" size="sm" className="gap-2 shadow-md">
-                <Filter className="h-4 w-4" />
-                Filters
-                {(categoryFilter !== "all" || timeFilter !== "all") && (
-                  <Badge variant="default" className="ml-1 h-5 w-5 rounded-full p-0 text-xs">
-                    !
-                  </Badge>
-                )}
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-80">
-              <SheetHeader>
-                <SheetTitle>Filter Reports</SheetTitle>
-              </SheetHeader>
-              <div className="mt-6 space-y-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Category</label>
-                  <Select
-                    value={categoryFilter}
-                    onValueChange={setCategoryFilter}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Time Range</label>
-                  <Select value={timeFilter} onValueChange={setTimeFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Time" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Time</SelectItem>
-                      <SelectItem value="7days">Last 7 Days</SelectItem>
-                      <SelectItem value="30days">Last 30 Days</SelectItem>
-                      <SelectItem value="90days">Last 90 Days</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    setCategoryFilter("all");
-                    setTimeFilter("all");
-                  }}
-                >
-                  Clear Filters
+        {/* Filter & Alert Controls */}
+        <div className="absolute left-4 right-4 top-4 z-10 flex flex-col gap-2 md:left-auto md:right-4 md:w-80">
+          <div className="flex items-center gap-2">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="secondary" size="sm" className="gap-2 shadow-md">
+                  <Filter className="h-4 w-4" />
+                  Filters
+                  {(categoryFilter !== "all" || timeFilter !== "all") && (
+                    <Badge variant="default" className="ml-1 h-5 w-5 rounded-full p-0 text-xs">
+                      !
+                    </Badge>
+                  )}
                 </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-80">
+                <SheetHeader>
+                  <SheetTitle>Filter Reports</SheetTitle>
+                </SheetHeader>
+                <div className="mt-6 space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Category</label>
+                    <Select
+                      value={categoryFilter}
+                      onValueChange={setCategoryFilter}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Categories" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+                          <SelectItem key={key} value={key}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-          <div className="rounded-lg bg-card px-3 py-2 text-sm shadow-md">
-            <span className="font-medium">{filteredReports.length}</span>{" "}
-            <span className="text-muted-foreground">reports</span>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Time Range</label>
+                    <Select value={timeFilter} onValueChange={setTimeFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Time" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Time</SelectItem>
+                        <SelectItem value="7days">Last 7 Days</SelectItem>
+                        <SelectItem value="30days">Last 30 Days</SelectItem>
+                        <SelectItem value="90days">Last 90 Days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setCategoryFilter("all");
+                      setTimeFilter("all");
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+
+                  <div className="border-t border-border pt-4">
+                    <ProximityAlertSettings
+                      settings={proximitySettings}
+                      onUpdateSettings={updateProximitySettings}
+                      geolocation={geolocation}
+                      alertCount={proximityAlerts.length}
+                    />
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            <div className="rounded-lg bg-card px-3 py-2 text-sm shadow-md">
+              <span className="font-medium">{filteredReports.length}</span>{" "}
+              <span className="text-muted-foreground">reports</span>
+            </div>
+
+            {proximitySettings.enabled && proximityAlerts.length > 0 && (
+              <Badge variant="destructive" className="animate-pulse shadow-md">
+                <Radar className="mr-1 h-3 w-3" />
+                {proximityAlerts.length}
+              </Badge>
+            )}
           </div>
+
+          {/* Proximity Alert Banner */}
+          <ProximityAlertBanner
+            alerts={proximityAlerts}
+            onDismiss={dismissAlert}
+            onDismissAll={dismissAll}
+            onAlertClick={(alert) => handleReportClick(alert.report)}
+          />
         </div>
 
         {/* Map */}
@@ -164,6 +197,12 @@ const MapView = ({ isAuthenticated, onLogout }: MapViewProps) => {
           reports={filteredReports}
           onReportClick={handleReportClick}
           className="h-full w-full"
+          userLocation={
+            proximitySettings.enabled && geolocation.latitude !== null
+              ? { lat: geolocation.latitude!, lng: geolocation.longitude! }
+              : undefined
+          }
+          alertRadius={proximitySettings.enabled ? proximitySettings.radius : undefined}
         />
 
         {/* Report Detail Card */}
