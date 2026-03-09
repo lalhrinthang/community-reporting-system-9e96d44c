@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Shield, Menu, X, MapPin, BarChart3, User } from "lucide-react";
+import { Shield, Menu, X, MapPin, BarChart3, User, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
