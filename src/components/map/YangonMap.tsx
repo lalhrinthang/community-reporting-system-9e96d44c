@@ -24,6 +24,8 @@ interface YangonMapProps {
   onReportClick?: (report: Report) => void;
   onMapClick?: (lat: number, lng: number) => void;
   selectedLocation?: { lat: number; lng: number } | null;
+  userLocation?: { lat: number; lng: number };
+  alertRadius?: number; // in meters
   className?: string;
   interactive?: boolean;
 }
@@ -73,11 +75,53 @@ const createSelectedLocationIcon = () => {
   });
 };
 
+const createUserLocationIcon = () => {
+  return L.divIcon({
+    className: "user-location-marker",
+    html: `
+      <div style="position: relative; width: 20px; height: 20px;">
+        <div style="
+          position: absolute;
+          width: 20px;
+          height: 20px;
+          background-color: #4285F4;
+          border: 3px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          z-index: 2;
+        "></div>
+        <div style="
+          position: absolute;
+          width: 40px;
+          height: 40px;
+          top: -10px;
+          left: -10px;
+          background-color: rgba(66, 133, 244, 0.2);
+          border-radius: 50%;
+          animation: userPulse 2s infinite;
+          z-index: 1;
+        "></div>
+      </div>
+      <style>
+        @keyframes userPulse {
+          0% { transform: scale(0.8); opacity: 0.8; }
+          50% { transform: scale(1.2); opacity: 0.4; }
+          100% { transform: scale(0.8); opacity: 0.8; }
+        }
+      </style>
+    `,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+  });
+};
+
 const YangonMap = ({
   reports,
   onReportClick,
   onMapClick,
   selectedLocation,
+  userLocation,
+  alertRadius,
   className = "h-full w-full",
   interactive = true,
 }: YangonMapProps) => {
@@ -85,6 +129,8 @@ const YangonMap = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const selectedMarkerRef = useRef<L.Marker | null>(null);
+  const userMarkerRef = useRef<L.Marker | null>(null);
+  const radiusCircleRef = useRef<L.Circle | null>(null);
 
   // Initialize map
   useEffect(() => {
@@ -125,10 +171,7 @@ const YangonMap = ({
     };
 
     map.on("click", handleClick);
-
-    return () => {
-      map.off("click", handleClick);
-    };
+    return () => { map.off("click", handleClick); };
   }, [onMapClick]);
 
   // Update report markers
@@ -184,13 +227,11 @@ const YangonMap = ({
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    // Remove existing selected marker
     if (selectedMarkerRef.current) {
       selectedMarkerRef.current.remove();
       selectedMarkerRef.current = null;
     }
 
-    // Add new selected marker if location exists
     if (selectedLocation) {
       const marker = L.marker([selectedLocation.lat, selectedLocation.lng], {
         icon: createSelectedLocationIcon(),
@@ -198,6 +239,51 @@ const YangonMap = ({
       selectedMarkerRef.current = marker;
     }
   }, [selectedLocation]);
+
+  // Handle user location marker and radius circle
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    // Remove existing
+    if (userMarkerRef.current) {
+      userMarkerRef.current.remove();
+      userMarkerRef.current = null;
+    }
+    if (radiusCircleRef.current) {
+      radiusCircleRef.current.remove();
+      radiusCircleRef.current = null;
+    }
+
+    if (userLocation) {
+      // Add user location marker
+      const marker = L.marker([userLocation.lat, userLocation.lng], {
+        icon: createUserLocationIcon(),
+        zIndexOffset: 1000,
+      })
+        .bindPopup(
+          `<div style="text-align: center; font-size: 13px;">
+            <strong>📍 Your Location</strong><br/>
+            <span style="color: #666; font-size: 11px;">Processed locally only</span>
+          </div>`
+        )
+        .addTo(map);
+      userMarkerRef.current = marker;
+
+      // Add radius circle
+      if (alertRadius) {
+        const circle = L.circle([userLocation.lat, userLocation.lng], {
+          radius: alertRadius,
+          color: "#4285F4",
+          fillColor: "#4285F4",
+          fillOpacity: 0.08,
+          weight: 2,
+          dashArray: "6, 6",
+        }).addTo(map);
+        radiusCircleRef.current = circle;
+      }
+    }
+  }, [userLocation, alertRadius]);
 
   return <div ref={mapRef} className={className} />;
 };
