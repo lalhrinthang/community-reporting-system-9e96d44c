@@ -10,6 +10,7 @@ import MapView from "./pages/MapView";
 import PublicDashboard from "./pages/PublicDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AddReport from "./pages/AddReport";
+import Alerts from "./pages/Alerts";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
