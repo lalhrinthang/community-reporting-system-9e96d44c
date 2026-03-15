@@ -50,6 +50,10 @@ const AppRoutes = () => {
         path="/alerts"
         element={<Alerts isAuthenticated={isAuthenticated} onLogout={logout} />}
       />
+      <Route
+        path="/about"
+        element={<About isAuthenticated={isAuthenticated} onLogout={logout} />}
+      />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>

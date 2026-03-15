@@ -17,6 +17,7 @@ const Header = ({ isAuthenticated = false, onLogout }: HeaderProps) => {
     { href: "/map", label: "Map", icon: MapPin },
     { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
     { href: "/alerts", label: "Alerts", icon: Bell },
+    { href: "/about", label: "About", icon: Info },
   ];
 
   const adminLinks = [
