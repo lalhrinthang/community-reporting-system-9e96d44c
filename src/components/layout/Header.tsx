@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Shield, Menu, X, MapPin, BarChart3, User, Bell } from "lucide-react";
+import { Shield, Menu, X, MapPin, BarChart3, User, Bell, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ const Header = ({ isAuthenticated = false, onLogout }: HeaderProps) => {
     { href: "/map", label: "Map", icon: MapPin },
     { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
     { href: "/alerts", label: "Alerts", icon: Bell },
+    { href: "/about", label: "About", icon: Info },
   ];
 
   const adminLinks = [

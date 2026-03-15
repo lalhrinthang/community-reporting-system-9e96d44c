@@ -11,6 +11,7 @@ import PublicDashboard from "./pages/PublicDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AddReport from "./pages/AddReport";
 import Alerts from "./pages/Alerts";
+import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,10 @@ const AppRoutes = () => {
       <Route
         path="/alerts"
         element={<Alerts isAuthenticated={isAuthenticated} onLogout={logout} />}
+      />
+      <Route
+        path="/about"
+        element={<About isAuthenticated={isAuthenticated} onLogout={logout} />}
       />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
